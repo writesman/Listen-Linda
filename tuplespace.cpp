@@ -16,24 +16,28 @@ void TupleSpace::out(const Tuple& tuple_data) {
 
 TupleSpace::Tuple TupleSpace::rd(const Tuple& pattern) {
     std::unique_lock<std::mutex> lock(mtx);
-    cv.wait(lock, [this, &pattern] {
-        return findMatchIndexLocked(pattern) != INVALID_INDEX;
-    });
 
-    size_t idx = findMatchIndexLocked(pattern);
-    return space[idx]; // return a copy without removing
+    for (;;) {  // loop until a random match is found
+        size_t idx = findRandomMatchIndexLocked(pattern);
+        if (idx != INVALID_INDEX) {
+            return space[idx]; // return a copy without removing
+        }
+        cv.wait(lock);
+    }
 }
 
 TupleSpace::Tuple TupleSpace::in(const Tuple& pattern) {
     std::unique_lock<std::mutex> lock(mtx);
-    cv.wait(lock, [this, &pattern] {
-        return findMatchIndexLocked(pattern) != INVALID_INDEX;
-    });
 
-    size_t idx = findMatchIndexLocked(pattern);
-    Tuple result = space[idx];
-    space.erase(space.begin() + idx); // remove from space
-    return result;
+    for (;;) {  // loop until a random match is found
+        size_t idx = findRandomMatchIndexLocked(pattern);
+        if (idx != INVALID_INDEX) {
+            Tuple result = std::move(space[idx]); // move for efficiency
+            space.erase(space.begin() + idx);     // remove from space
+            return result;
+        }
+        cv.wait(lock);
+    }
 }
 
 // ------------------- Helper functions -------------------
