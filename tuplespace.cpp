@@ -39,8 +39,7 @@ TupleSpace::Tuple TupleSpace::in(const Tuple& pattern) {
 // ------------------- Helper functions -------------------
 
 bool TupleSpace::isWildcard(const Value& v) {
-    // Example: treat typeid(void) as wildcard
-    return v.type() == typeid(void);
+    return !v.has_value();
 }
 
 bool TupleSpace::valueMatches(const Value& pattern, const Value& v) {
@@ -90,6 +89,8 @@ size_t TupleSpace::findMatchIndexLocked(const Tuple& pattern) {
 
 size_t TupleSpace::findRandomMatchIndexLocked(const Tuple& pattern) {
     std::vector<size_t> matches;
+    matches.reserve(space.size());  // reserve enough for all tuples
+    
     for (size_t i = 0; i < space.size(); ++i) {
         if (tupleMatches(pattern, space[i])) matches.push_back(i);
     }
