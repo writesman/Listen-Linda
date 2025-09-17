@@ -20,6 +20,9 @@ public:
     static bool isWildcard(const Value& v);
 
 private:
+    // Sentinel for "no match"
+    static constexpr size_t INVALID_INDEX = static_cast<size_t>(-1);
+
     // Internal storage
     std::vector<Tuple> space;
     std::mutex mtx;
@@ -32,4 +35,8 @@ private:
     // Internal helper functions
     bool anyMatch(const Tuple& pattern);
     Tuple randomMatch(const Tuple& pattern);
+
+    // Index-based helpers (to be implemented next)
+    size_t findMatchIndexLocked(const Tuple& pattern);
+    size_t findRandomMatchIndexLocked(const Tuple& pattern);
 };

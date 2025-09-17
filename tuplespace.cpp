@@ -3,6 +3,8 @@
 #include <string>
 #include <stdexcept>
 
+// ----------------- Public API -----------------
+
 void TupleSpace::out(const Tuple& tuple_data) {
     {
         std::lock_guard<std::mutex> lock(mtx);
@@ -13,27 +15,17 @@ void TupleSpace::out(const Tuple& tuple_data) {
 
 TupleSpace::Tuple TupleSpace::rd(const Tuple& pattern) {
     std::unique_lock<std::mutex> lock(mtx);
-    cv.wait(lock, [&]{ return anyMatch(pattern); });
-    return randomMatch(pattern);
+    cv.wait(lock, [&]{ return findMatchIndexLocked(pattern) != INVALID_INDEX; });
+    return space[findRandomMatchIndexLocked(pattern)];
 }
 
 TupleSpace::Tuple TupleSpace::in(const Tuple& pattern) {
     std::unique_lock<std::mutex> lock(mtx);
-    cv.wait(lock, [&]{ return anyMatch(pattern); });
+    cv.wait(lock, [&]{ return findMatchIndexLocked(pattern) != INVALID_INDEX; });
 
-    // find all matching tuples
-    std::vector<size_t> matches_idx;
-    for (size_t i = 0; i < space.size(); i++) {
-        if (tupleMatches(pattern, space[i])) matches_idx.push_back(i);
-    }
-
-    // pick one at random
-    static std::mt19937 rng{ std::random_device{}() };
-    std::uniform_int_distribution<size_t> dist(0, matches_idx.size() - 1);
-    size_t chosen = matches_idx[dist(rng)];
-    Tuple result = space[chosen];
-    space.erase(space.begin() + chosen); // remove it
-
+    size_t idx = findRandomMatchIndexLocked(pattern);
+    Tuple result = std::move(space[idx]);
+    space.erase(space.begin() + idx);
     return result;
 }
 
@@ -68,19 +60,28 @@ bool TupleSpace::tupleMatches(const Tuple& pattern, const Tuple& t) {
 // ----------------- Other helpers -----------------
 
 bool TupleSpace::anyMatch(const Tuple& pattern) {
-    for (const auto& t : space) {
-        if (tupleMatches(pattern, t)) return true;
-    }
-    return false;
+    std::lock_guard<std::mutex> lock(mtx);
+    return findMatchIndexLocked(pattern) != INVALID_INDEX;
 }
 
-TupleSpace::Tuple TupleSpace::randomMatch(const Tuple& pattern) {
+// ----------------- Index-based match helpers -----------------
+
+size_t TupleSpace::findMatchIndexLocked(const Tuple& pattern) {
+    for (size_t i = 0; i < space.size(); ++i) {
+        if (tupleMatches(pattern, space[i])) return i;
+    }
+    return INVALID_INDEX;
+}
+
+size_t TupleSpace::findRandomMatchIndexLocked(const Tuple& pattern) {
     std::vector<size_t> matches_idx;
-    for (size_t i = 0; i < space.size(); i++) {
+    for (size_t i = 0; i < space.size(); ++i) {
         if (tupleMatches(pattern, space[i])) matches_idx.push_back(i);
     }
 
+    if (matches_idx.empty()) return INVALID_INDEX;
+
     static std::mt19937 rng{ std::random_device{}() };
     std::uniform_int_distribution<size_t> dist(0, matches_idx.size() - 1);
-    return space[matches_idx[dist(rng)]];
+    return matches_idx[dist(rng)];
 }
