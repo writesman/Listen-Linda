@@ -34,7 +34,6 @@ private:
 
     // Internal helper functions
     bool anyMatch(const Tuple& pattern);
-    Tuple randomMatch(const Tuple& pattern);
 
     // Index-based helpers (to be implemented next)
     size_t findMatchIndexLocked(const Tuple& pattern);

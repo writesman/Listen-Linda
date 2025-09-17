@@ -15,14 +15,19 @@ void TupleSpace::out(const Tuple& tuple_data) {
 
 TupleSpace::Tuple TupleSpace::rd(const Tuple& pattern) {
     std::unique_lock<std::mutex> lock(mtx);
+    // Wait until at least one tuple matches
     cv.wait(lock, [&]{ return findMatchIndexLocked(pattern) != INVALID_INDEX; });
-    return space[findRandomMatchIndexLocked(pattern)];
+    // Return a random matching tuple without removing it
+    size_t idx = findRandomMatchIndexLocked(pattern);
+    return space[idx];
 }
 
 TupleSpace::Tuple TupleSpace::in(const Tuple& pattern) {
     std::unique_lock<std::mutex> lock(mtx);
+    // Wait until at least one tuple matches
     cv.wait(lock, [&]{ return findMatchIndexLocked(pattern) != INVALID_INDEX; });
 
+    // Remove a random matching tuple
     size_t idx = findRandomMatchIndexLocked(pattern);
     Tuple result = std::move(space[idx]);
     space.erase(space.begin() + idx);
