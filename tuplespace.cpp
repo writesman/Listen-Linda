@@ -2,6 +2,7 @@
 #include <iostream>
 #include <thread>
 #include <chrono>
+#include <cstdlib>   // for rand()
 
 // ------------------- Public API -------------------
 
@@ -43,12 +44,35 @@ bool TupleSpace::isWildcard(const Value& v) {
 }
 
 bool TupleSpace::valueMatches(const Value& pattern, const Value& v) {
+    // Wildcard matches anything
     if (isWildcard(pattern)) return true;
-    return pattern.type() == v.type() && pattern.has_value() && v.has_value() && pattern.type() == v.type();
+
+    // Both must hold a value
+    if (!pattern.has_value() || !v.has_value()) return false;
+
+    // Match by type and value
+    const std::type_info& pType = pattern.type();
+    const std::type_info& vType = v.type();
+
+    if (pType != vType) return false;
+
+    // Compare based on type
+    if (pType == typeid(int64_t))
+        return std::any_cast<int64_t>(pattern) == std::any_cast<int64_t>(v);
+    else if (pType == typeid(double))
+        return std::any_cast<double>(pattern) == std::any_cast<double>(v);
+    else if (pType == typeid(std::string))
+        return std::any_cast<std::string>(pattern) == std::any_cast<std::string>(v);
+    else if (pType == typeid(bool))
+        return std::any_cast<bool>(pattern) == std::any_cast<bool>(v);
+    else
+        // Unsupported types: match fails
+        return false;
 }
 
 bool TupleSpace::tupleMatches(const Tuple& pattern, const Tuple& t) {
     if (pattern.size() != t.size()) return false;
+
     for (size_t i = 0; i < pattern.size(); ++i) {
         if (!valueMatches(pattern[i], t[i])) return false;
     }

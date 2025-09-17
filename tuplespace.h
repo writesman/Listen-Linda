@@ -5,6 +5,8 @@
 #include <mutex>
 #include <condition_variable>
 #include <cstddef>
+#include <string>
+#include <cstdint>
 
 class TupleSpace {
 public:
