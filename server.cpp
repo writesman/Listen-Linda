@@ -15,20 +15,20 @@ std::string trim(const std::string& s) {
     return (start == std::string::npos) ? "" : s.substr(start, end - start + 1);
 }
 
-// Parse tuple string like ("foo", 42, ?) into std::any vector
-std::vector<std::any> parse_tuple(const std::string& s) {
-    std::vector<std::any> tuple;
+// Parse tuple string like ("foo", 42, ?) into TupleSpace::Tuple
+TupleSpace::Tuple parse_tuple(const std::string& s) {
+    TupleSpace::Tuple tuple;
     std::string str = s;
-    if (str.front() == '(') str = str.substr(1);
-    if (str.back() == ')') str.pop_back();
+    if (!str.empty() && str.front() == '(') str = str.substr(1);
+    if (!str.empty() && str.back() == ')') str.pop_back();
 
     std::istringstream iss(str);
     std::string token;
     while (std::getline(iss, token, ',')) {
         token = trim(token);
         if (token == "?") {
-            tuple.push_back(std::any{}); // wildcard
-        } else if (token.front() == '"' && token.back() == '"') {
+            tuple.push_back(TupleSpace::Value{}); // wildcard
+        } else if (!token.empty() && token.front() == '"' && token.back() == '"') {
             tuple.push_back(token.substr(1, token.size() - 2)); // string
         } else {
             try {
@@ -43,7 +43,7 @@ std::vector<std::any> parse_tuple(const std::string& s) {
 }
 
 // Convert tuple to example output string with types
-std::string tuple_to_output(const std::vector<std::any>& t) {
+std::string tuple_to_output(const TupleSpace::Tuple& t) {
     std::ostringstream oss;
     for (size_t i = 0; i < t.size(); ++i) {
         if (t[i].type() == typeid(std::string)) oss << "string \"" << std::any_cast<std::string>(t[i]) << "\"";
