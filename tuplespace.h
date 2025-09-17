@@ -4,7 +4,6 @@
 #include <any>
 #include <mutex>
 #include <condition_variable>
-#include <cstddef>
 #include <string>
 #include <cstdint>
 
@@ -14,9 +13,9 @@ public:
     using Tuple = std::vector<Value>;  // A tuple is a vector of values
 
     // Public API
-    void out(const Tuple& tuple_data); // Add a tuple to the space
-    Tuple rd(const Tuple& pattern);    // Read a tuple matching the pattern (blocking)
-    Tuple in(const Tuple& pattern);    // Read and remove a tuple matching the pattern (blocking)
+    void out(const Tuple& tuple_data); // Write a tuple to the space
+    Tuple rd(const Tuple& pattern);    // Read a tuple without removing it
+    Tuple in(const Tuple& pattern);    // Read and remove a tuple
 
     // Helper for checking wildcards
     static bool isWildcard(const Value& v);
@@ -34,7 +33,6 @@ private:
     static bool valueMatches(const Value& pattern, const Value& v);
     static bool tupleMatches(const Tuple& pattern, const Tuple& t);
 
-    // Index-based helpers
-    size_t findMatchIndexLocked(const Tuple& pattern);
+    // Index-based helper
     size_t findRandomMatchIndexLocked(const Tuple& pattern);
 };

@@ -1,7 +1,4 @@
 #include "tuplespace.h"
-#include <iostream>
-#include <thread>
-#include <chrono>
 #include <cstdlib>   // for rand()
 
 // ------------------- Public API -------------------
@@ -47,19 +44,13 @@ bool TupleSpace::isWildcard(const Value& v) {
 }
 
 bool TupleSpace::valueMatches(const Value& pattern, const Value& v) {
-    // Wildcard matches anything
     if (isWildcard(pattern)) return true;
-
-    // Both must hold a value
     if (!pattern.has_value() || !v.has_value()) return false;
 
-    // Match by type and value
     const std::type_info& pType = pattern.type();
     const std::type_info& vType = v.type();
-
     if (pType != vType) return false;
 
-    // Compare based on type
     if (pType == typeid(int64_t))
         return std::any_cast<int64_t>(pattern) == std::any_cast<int64_t>(v);
     else if (pType == typeid(double))
@@ -67,8 +58,7 @@ bool TupleSpace::valueMatches(const Value& pattern, const Value& v) {
     else if (pType == typeid(std::string))
         return std::any_cast<std::string>(pattern) == std::any_cast<std::string>(v);
     else
-        // Unsupported types: match fails
-        return false;
+        return false; // unsupported type
 }
 
 bool TupleSpace::tupleMatches(const Tuple& pattern, const Tuple& t) {
@@ -80,24 +70,16 @@ bool TupleSpace::tupleMatches(const Tuple& pattern, const Tuple& t) {
     return true;
 }
 
-// ------------------- Index-based helpers -------------------
-
-size_t TupleSpace::findMatchIndexLocked(const Tuple& pattern) {
-    for (size_t i = 0; i < space.size(); ++i) {
-        if (tupleMatches(pattern, space[i])) return i;
-    }
-    return INVALID_INDEX;
-}
+// ------------------- Index-based helper -------------------
 
 size_t TupleSpace::findRandomMatchIndexLocked(const Tuple& pattern) {
     std::vector<size_t> matches;
-    matches.reserve(space.size());  // reserve enough for all tuples
-    
+    matches.reserve(space.size());
+
     for (size_t i = 0; i < space.size(); ++i) {
         if (tupleMatches(pattern, space[i])) matches.push_back(i);
     }
     if (matches.empty()) return INVALID_INDEX;
 
-    size_t randIdx = rand() % matches.size();
-    return matches[randIdx];
+    return rand() % matches.size();
 }
