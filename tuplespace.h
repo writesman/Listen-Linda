@@ -1,5 +1,4 @@
-#ifndef TUPLESPACE_H
-#define TUPLESPACE_H
+#pragma once
 
 #include <vector>
 #include <any>
@@ -32,5 +31,3 @@ private:
     // Return a random matching tuple (without removing)
     std::vector<std::any> randomMatch(const std::vector<std::any>& pattern);
 };
-
-#endif // TUPLESPACE_H
