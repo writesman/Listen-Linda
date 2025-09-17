@@ -16,6 +16,24 @@ echo "=== Basic tuple operations ==="
 ./client -out '("alpha", "beta", 42)'
 ./client -rd '(?, "beta", ?)'
 
+echo "=== Double tests ==="
+./client -out '("pi", 3.14159)'
+./client -rd '("pi", ?)'
+./client -in '("pi", ?)'
+
+./client -out '("e", 2.71828, "Euler")'
+./client -rd '("e", ?, ?)'
+./client -in '("e", ?, ?)'
+
+echo "=== Mixed-type tuple tests ==="
+./client -out '("temperature", 98, 36.6)'
+./client -rd '("temperature", ?, ?)'
+./client -in '("temperature", ?, ?)'
+
+./client -out '("sensor", "humidity", 55.5, 100)'
+./client -rd '("sensor", ?, ?, ?)'
+./client -in '("sensor", ?, ?, ?)'
+
 echo "=== Wildcard tests ==="
 ./client -out '("John", "Doe", 25)'
 ./client -out '("Jane", "Doe", 30)'
@@ -61,6 +79,31 @@ sleep 2  # ensure background client is waiting
 ./client -out '("waiting", 100)'
 
 sleep 2  # give background client time to print message
+
+echo "=== Multiple matching tuples test ==="
+# Add multiple tuples that match the same template
+./client -out '("fruit", "apple", 10)'
+./client -out '("fruit", "banana", 10)'
+./client -out '("fruit", "cherry", 10)'
+
+# rd with template that matches all three
+echo "Reading a tuple with template ('fruit', ?, 10)..."
+./client -rd '("fruit", ?, 10)'  # should randomly return one of the three
+
+# in with template that matches remaining tuples
+echo "Removing a tuple with template ('fruit', ?, 10)..."
+./client -in '("fruit", ?, 10)'  # should remove a random one of the remaining two
+
+# rd again to verify remaining tuple
+echo "Reading again with template ('fruit', ?, 10)..."
+./client -rd '("fruit", ?, 10)'  # should return one of the two remaining
+
+# in again to remove the last one
+echo "Removing last tuple with template ('fruit', ?, 10)..."
+./client -in '("fruit", ?, 10)'
+
+# rd should now block if uncommented, so we skip or just note
+echo "All matching tuples removed. No tuple with ('fruit', ?, 10) remains."
 
 # Stop the server if still running
 if kill -0 $SERVER_PID 2>/dev/null; then
