@@ -6,7 +6,7 @@
 void TupleSpace::out(const Tuple& tuple_data) {
     {
         std::lock_guard<std::mutex> lock(mtx);
-        tuples.push_back(tuple_data);
+        space.push_back(tuple_data);
     }
     cv.notify_all(); // wake up waiting threads
 }
@@ -23,16 +23,16 @@ TupleSpace::Tuple TupleSpace::in(const Tuple& pattern) {
 
     // find all matching tuples
     std::vector<size_t> matches_idx;
-    for (size_t i = 0; i < tuples.size(); i++) {
-        if (tupleMatches(pattern, tuples[i])) matches_idx.push_back(i);
+    for (size_t i = 0; i < space.size(); i++) {
+        if (tupleMatches(pattern, space[i])) matches_idx.push_back(i);
     }
 
     // pick one at random
     static std::mt19937 rng{ std::random_device{}() };
     std::uniform_int_distribution<size_t> dist(0, matches_idx.size() - 1);
     size_t chosen = matches_idx[dist(rng)];
-    Tuple result = tuples[chosen];
-    tuples.erase(tuples.begin() + chosen); // remove it
+    Tuple result = space[chosen];
+    space.erase(space.begin() + chosen); // remove it
 
     return result;
 }
@@ -68,7 +68,7 @@ bool TupleSpace::tupleMatches(const Tuple& pattern, const Tuple& t) {
 // ----------------- Other helpers -----------------
 
 bool TupleSpace::anyMatch(const Tuple& pattern) {
-    for (const auto& t : tuples) {
+    for (const auto& t : space) {
         if (tupleMatches(pattern, t)) return true;
     }
     return false;
@@ -76,11 +76,11 @@ bool TupleSpace::anyMatch(const Tuple& pattern) {
 
 TupleSpace::Tuple TupleSpace::randomMatch(const Tuple& pattern) {
     std::vector<size_t> matches_idx;
-    for (size_t i = 0; i < tuples.size(); i++) {
-        if (tupleMatches(pattern, tuples[i])) matches_idx.push_back(i);
+    for (size_t i = 0; i < space.size(); i++) {
+        if (tupleMatches(pattern, space[i])) matches_idx.push_back(i);
     }
 
     static std::mt19937 rng{ std::random_device{}() };
     std::uniform_int_distribution<size_t> dist(0, matches_idx.size() - 1);
-    return tuples[matches_idx[dist(rng)]];
+    return space[matches_idx[dist(rng)]];
 }

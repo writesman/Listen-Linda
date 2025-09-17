@@ -21,7 +21,7 @@ public:
 
 private:
     // Internal storage
-    std::vector<Tuple> tuples;
+    std::vector<Tuple> space;
     std::mutex mtx;
     std::condition_variable cv;
 
