@@ -16,6 +16,9 @@ public:
     Tuple rd(const Tuple& pattern);          // Read a tuple matching the pattern (blocking)
     Tuple in(const Tuple& pattern);          // Read and remove a tuple matching the pattern (blocking)
 
+    // Static helper
+    static bool isWildcard(const Value& v);  // returns true if value is a wildcard (empty)
+
 private:
     // Internal storage
     std::vector<Tuple> tuples;

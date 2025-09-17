@@ -3,7 +3,12 @@
 #include <stdexcept>
 #include <string>
 
-void TupleSpace::out(const TupleSpace::Tuple& tuple_data) {
+// Static helper to check for wildcards
+bool TupleSpace::isWildcard(const Value& v) {
+    return !v.has_value();  // empty value means wildcard
+}
+
+void TupleSpace::out(const Tuple& tuple_data) {
     {
         std::lock_guard<std::mutex> lock(mtx);
         tuples.push_back(tuple_data);
@@ -11,13 +16,13 @@ void TupleSpace::out(const TupleSpace::Tuple& tuple_data) {
     cv.notify_all(); // wake up waiting threads
 }
 
-TupleSpace::Tuple TupleSpace::rd(const TupleSpace::Tuple& pattern) {
+TupleSpace::Tuple TupleSpace::rd(const Tuple& pattern) {
     std::unique_lock<std::mutex> lock(mtx);
     cv.wait(lock, [&]{ return anyMatch(pattern); });
     return randomMatch(pattern); // return a random matching tuple
 }
 
-TupleSpace::Tuple TupleSpace::in(const TupleSpace::Tuple& pattern) {
+TupleSpace::Tuple TupleSpace::in(const Tuple& pattern) {
     std::unique_lock<std::mutex> lock(mtx);
     cv.wait(lock, [&]{ return anyMatch(pattern); });
 
@@ -37,11 +42,12 @@ TupleSpace::Tuple TupleSpace::in(const TupleSpace::Tuple& pattern) {
     return result;
 }
 
+// Updated matches function using isWildcard
 bool TupleSpace::matches(const Tuple& tuple, const Tuple& pattern) {
     if (tuple.size() != pattern.size()) return false;
 
     for (size_t i = 0; i < tuple.size(); i++) {
-        if (!pattern[i].has_value()) continue; // wildcard
+        if (isWildcard(pattern[i])) continue; // use isWildcard helper
         if (tuple[i].type() != pattern[i].type()) return false;
 
         if (tuple[i].type() == typeid(int64_t) &&
@@ -66,7 +72,7 @@ bool TupleSpace::anyMatch(const Tuple& pattern) {
     return false;
 }
 
-TupleSpace::Tuple TupleSpace::randomMatch(const TupleSpace::Tuple& pattern) {
+TupleSpace::Tuple TupleSpace::randomMatch(const Tuple& pattern) {
     std::vector<size_t> matches_idx;
     for (size_t i = 0; i < tuples.size(); i++) {
         if (matches(tuples[i], pattern)) matches_idx.push_back(i);
