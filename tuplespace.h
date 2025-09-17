@@ -16,8 +16,8 @@ public:
     Tuple rd(const Tuple& pattern);          // Read a tuple matching the pattern (blocking)
     Tuple in(const Tuple& pattern);          // Read and remove a tuple matching the pattern (blocking)
 
-    // Static helper
-    static bool isWildcard(const Value& v);  // returns true if value is a wildcard (empty)
+    // Helper for checking wildcards
+    static bool isWildcard(const Value& v);
 
 private:
     // Internal storage
@@ -25,8 +25,11 @@ private:
     std::mutex mtx;
     std::condition_variable cv;
 
+    // Matching helpers
+    static bool valueMatches(const Value& pattern, const Value& v);
+    static bool tupleMatches(const Tuple& pattern, const Tuple& t);
+
     // Internal helper functions
-    bool matches(const Tuple& tuple, const Tuple& pattern);
     bool anyMatch(const Tuple& pattern);
     Tuple randomMatch(const Tuple& pattern);
 };

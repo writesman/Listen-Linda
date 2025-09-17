@@ -1,12 +1,7 @@
 #include "tuplespace.h"
 #include <random>
-#include <stdexcept>
 #include <string>
-
-// Static helper to check for wildcards
-bool TupleSpace::isWildcard(const Value& v) {
-    return !v.has_value();  // empty value means wildcard
-}
+#include <stdexcept>
 
 void TupleSpace::out(const Tuple& tuple_data) {
     {
@@ -19,7 +14,7 @@ void TupleSpace::out(const Tuple& tuple_data) {
 TupleSpace::Tuple TupleSpace::rd(const Tuple& pattern) {
     std::unique_lock<std::mutex> lock(mtx);
     cv.wait(lock, [&]{ return anyMatch(pattern); });
-    return randomMatch(pattern); // return a random matching tuple
+    return randomMatch(pattern);
 }
 
 TupleSpace::Tuple TupleSpace::in(const Tuple& pattern) {
@@ -29,7 +24,7 @@ TupleSpace::Tuple TupleSpace::in(const Tuple& pattern) {
     // find all matching tuples
     std::vector<size_t> matches_idx;
     for (size_t i = 0; i < tuples.size(); i++) {
-        if (matches(tuples[i], pattern)) matches_idx.push_back(i);
+        if (tupleMatches(pattern, tuples[i])) matches_idx.push_back(i);
     }
 
     // pick one at random
@@ -42,32 +37,39 @@ TupleSpace::Tuple TupleSpace::in(const Tuple& pattern) {
     return result;
 }
 
-// Updated matches function using isWildcard
-bool TupleSpace::matches(const Tuple& tuple, const Tuple& pattern) {
-    if (tuple.size() != pattern.size()) return false;
+// ----------------- Matching helpers -----------------
 
-    for (size_t i = 0; i < tuple.size(); i++) {
-        if (isWildcard(pattern[i])) continue; // use isWildcard helper
-        if (tuple[i].type() != pattern[i].type()) return false;
+bool TupleSpace::isWildcard(const Value& v) {
+    return !v.has_value();
+}
 
-        if (tuple[i].type() == typeid(int64_t) &&
-            std::any_cast<int64_t>(tuple[i]) != std::any_cast<int64_t>(pattern[i]))
-            return false;
+bool TupleSpace::valueMatches(const Value& pattern, const Value& v) {
+    if (isWildcard(pattern)) return true;
+    if (pattern.type() != v.type()) return false;
 
-        if (tuple[i].type() == typeid(double) &&
-            std::any_cast<double>(tuple[i]) != std::any_cast<double>(pattern[i]))
-            return false;
+    if (pattern.type() == typeid(int64_t))
+        return std::any_cast<int64_t>(pattern) == std::any_cast<int64_t>(v);
+    if (pattern.type() == typeid(double))
+        return std::any_cast<double>(pattern) == std::any_cast<double>(v);
+    if (pattern.type() == typeid(std::string))
+        return std::any_cast<std::string>(pattern) == std::any_cast<std::string>(v);
 
-        if (tuple[i].type() == typeid(std::string) &&
-            std::any_cast<std::string>(tuple[i]) != std::any_cast<std::string>(pattern[i]))
-            return false;
+    return false; // unknown types
+}
+
+bool TupleSpace::tupleMatches(const Tuple& pattern, const Tuple& t) {
+    if (pattern.size() != t.size()) return false;
+    for (size_t i = 0; i < t.size(); ++i) {
+        if (!valueMatches(pattern[i], t[i])) return false;
     }
     return true;
 }
 
+// ----------------- Other helpers -----------------
+
 bool TupleSpace::anyMatch(const Tuple& pattern) {
     for (const auto& t : tuples) {
-        if (matches(t, pattern)) return true;
+        if (tupleMatches(pattern, t)) return true;
     }
     return false;
 }
@@ -75,7 +77,7 @@ bool TupleSpace::anyMatch(const Tuple& pattern) {
 TupleSpace::Tuple TupleSpace::randomMatch(const Tuple& pattern) {
     std::vector<size_t> matches_idx;
     for (size_t i = 0; i < tuples.size(); i++) {
-        if (matches(tuples[i], pattern)) matches_idx.push_back(i);
+        if (tupleMatches(pattern, tuples[i])) matches_idx.push_back(i);
     }
 
     static std::mt19937 rng{ std::random_device{}() };
