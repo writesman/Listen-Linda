@@ -66,8 +66,6 @@ bool TupleSpace::valueMatches(const Value& pattern, const Value& v) {
         return std::any_cast<double>(pattern) == std::any_cast<double>(v);
     else if (pType == typeid(std::string))
         return std::any_cast<std::string>(pattern) == std::any_cast<std::string>(v);
-    else if (pType == typeid(bool))
-        return std::any_cast<bool>(pattern) == std::any_cast<bool>(v);
     else
         // Unsupported types: match fails
         return false;
