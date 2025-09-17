@@ -81,5 +81,5 @@ size_t TupleSpace::findRandomMatchIndexLocked(const Tuple& pattern) {
     }
     if (matches.empty()) return INVALID_INDEX;
 
-    return rand() % matches.size();
+    return matches[rand() % matches.size()];
 }
