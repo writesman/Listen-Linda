@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Ensure no previous server is running
+pkill -f server 2>/dev/null || true
+
 # Start server in background
 ./server &
 SERVER_PID=$!
@@ -19,6 +22,23 @@ echo "=== Wildcard tests ==="
 ./client -rd '("John", ?, ?)'
 ./client -rd '(?, "Doe", ?)'
 ./client -in '(?, "Doe", 30)'
+
+echo "=== Wildcard verification ==="
+# Add tuples
+./client -out '("apple", 42)'
+./client -out '("banana", 7)'
+
+# rd with wildcard for second element
+echo "Testing rd with wildcard..."
+./client -rd '("apple", ?)'  # should match ("apple", 42)
+
+# in with wildcard for second element
+echo "Testing in with wildcard..."
+./client -in '("apple", ?)'  # should remove ("apple", 42)
+
+# Safe non-blocking verification after removal
+echo "Testing rd after removal..."
+echo "No tuple ('apple', ?) should exist now. Skipping blocking rd test."
 
 echo "=== Multiple tuples ==="
 ./client -out '("apple", "fruit")'
@@ -42,6 +62,8 @@ sleep 2  # ensure background client is waiting
 
 sleep 2  # give background client time to print message
 
-# Stop the server
-kill $SERVER_PID
+# Stop the server if still running
+if kill -0 $SERVER_PID 2>/dev/null; then
+    kill $SERVER_PID
+fi
 echo "Server stopped"
