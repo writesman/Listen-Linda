@@ -4,10 +4,8 @@
 // ------------------- Public API -------------------
 
 void TupleSpace::out(const Tuple& tuple_data) {
-    {
-        std::unique_lock<std::mutex> lock(mtx);
-        space.push_back(tuple_data);
-    }
+    std::unique_lock<std::mutex> lock(mtx);
+    space.push_back(tuple_data);
     cv.notify_all(); // wake up any threads waiting for a match
 }
 
