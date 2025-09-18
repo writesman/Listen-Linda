@@ -42,21 +42,19 @@ bool TupleSpace::isWildcard(const Value& v) {
 }
 
 bool TupleSpace::valueMatches(const Value& pattern, const Value& v) {
-    if (isWildcard(pattern)) return true;
+    if (isWildcard(pattern)) return true;         // ? matches anything
     if (!pattern.has_value() || !v.has_value()) return false;
 
-    const std::type_info& pType = pattern.type();
-    const std::type_info& vType = v.type();
-    if (pType != vType) return false;
+    if (pattern.type() != v.type()) return false;
 
-    if (pType == typeid(int64_t))
+    if (pattern.type() == typeid(int64_t))
         return std::any_cast<int64_t>(pattern) == std::any_cast<int64_t>(v);
-    else if (pType == typeid(double))
+    if (pattern.type() == typeid(double))
         return std::any_cast<double>(pattern) == std::any_cast<double>(v);
-    else if (pType == typeid(std::string))
+    if (pattern.type() == typeid(std::string))
         return std::any_cast<std::string>(pattern) == std::any_cast<std::string>(v);
-    else
-        return false; // unsupported type
+
+    return false; // unsupported type
 }
 
 bool TupleSpace::tupleMatches(const Tuple& pattern, const Tuple& t) {
