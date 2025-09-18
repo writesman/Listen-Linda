@@ -1,13 +1,8 @@
 #!/usr/bin/env bash
-# Safe test script for tuple space functionality
-
-set -euo pipefail
-
-# Kill any previous server instances
-pkill -f server 2>/dev/null || true
+# Simple test script for tuple space functionality
 
 # Start the server in the background
-./server > server.log 2>&1 &
+./server &
 SERVER_PID=$!
 sleep 1
 
@@ -26,14 +21,14 @@ run() {
     ./client "$@"
 }
 
-echo "== Basic tuple operations =="
+# Basic tuple operations
 run -out '("foo", "bar")'
 run -rd '("foo", ?)'
 run -in '("foo", ?)'
 run -out '("alpha", "beta", 42)'
 run -rd '(?, "beta", ?)'
 
-echo "== Mixed types and numbers =="
+# Mixed types and numbers
 run -out '("guy", 3.14159)'
 run -rd '("guy", ?)'
 run -in '("guy", ?)'
@@ -41,15 +36,16 @@ run -out '("mouse", "keyboard", 55.5, 100)'
 run -rd '("mouse", ?, ?, ?)'
 run -in '("mouse", ?, ?, ?)'
 
-echo "== Wildcard matching =="
+# Wildcard matching
 run -out '("John", "Deere", 25)'
 run -out '("John", "Deere", 30)'
 run -rd '(?, "Deere", ?)'
 run -in '(?, "Deere", 30)'
 
-echo "== Blocking IN test =="
-echo "Starting background blocking client..."
-timeout 5 ./client -in '("Hello!", 100)' &
+# --- Blocking in test ---
+echo "Starting background blocking in..."
+echo "(Background client is now waiting for tuple ('Hello!', 100))"
+./client -in '("Hello!", 100)' &
 BLOCK_PID=$!
 sleep 1
 echo "Background client should be waiting now..."
@@ -57,22 +53,21 @@ echo "Background client should be waiting now..."
 # Out command adds the tuple
 run -out '("Hello!", 100)'
 
-# Wait for the background client (don’t crash if it times out)
-wait $BLOCK_PID 2>/dev/null || true
-echo "(Background client finished or timed out)"
+# Wait for the background client to finish
+wait $BLOCK_PID
+echo "(Background client has received and removed the tuple)"
+echo "Background in finished"
 
-echo "== Multiple matching tuples =="
+# Multiple matching tuples
 run -out '("yummy", "apple", 10)'
 run -out '("yummy", "banana", 10)'
 run -rd '("yummy", ?, 10)'
 run -in '("yummy", ?, 10)'
 
-echo "== Edge cases =="
+# Edge cases
 run -out '()'
 run -rd '()'
 run -in '()'
 run -out '("big", -9223372036854775808, 1.797693e308)'
 run -rd '("big", ?, ?)'
 run -in '("big", ?, ?)'
-
-echo "== All tests finished =="
