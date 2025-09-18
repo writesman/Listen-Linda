@@ -18,9 +18,9 @@ run() {
     ./client "$@"
 }
 
-# Start server
-./server
-SRV_PID=$!
+# Start server in background
+./server > server.log 2>&1 &
+SERVER_PID=$!
 sleep 1
 
 # Basic tuple operations
