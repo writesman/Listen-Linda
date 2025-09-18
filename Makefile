@@ -9,6 +9,8 @@ CLIENT_SRC = client.cpp
 SERVER_BIN = server
 CLIENT_BIN = client
 
+.PHONY: all clean test
+
 all: $(SERVER_BIN) $(CLIENT_BIN)
 
 $(SERVER_BIN): $(SERVER_SRC)
@@ -17,7 +19,6 @@ $(SERVER_BIN): $(SERVER_SRC)
 $(CLIENT_BIN): $(CLIENT_SRC)
 	$(CXX) $(CXXFLAGS) -o $@ $^
 
-# Build and run test cases
 test: all
 	./test_cases.sh
 
