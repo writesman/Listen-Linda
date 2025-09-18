@@ -3,11 +3,6 @@
 
 set -euo pipefail
 
-# Kill previous server safely
-kill_previous_server() {
-    pkill -f server 2>/dev/null || true
-}
-
 # Ensure the server is stopped on script exit
 cleanup() {
     if [[ -n "${SERVER_PID:-}" ]] && kill -0 "$SERVER_PID" 2>/dev/null; then
