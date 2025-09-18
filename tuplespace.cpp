@@ -1,81 +1,63 @@
 #include "tuplespace.h"
-#include <cstdlib>   // for rand()
+#include <cstdlib>
 
-// ------------------- Public API -------------------
-
+// Add a tuple to the space
 void TupleSpace::out(const Tuple& tuple_data) {
     std::unique_lock<std::mutex> lock(mtx);
     space.push_back(tuple_data);
-    cv.notify_all(); // wake up any threads waiting for a match
+    cv.notify_all();
 }
 
+// Read a tuple matching the pattern without removing it
 TupleSpace::Tuple TupleSpace::rd(const Tuple& pattern) {
     std::unique_lock<std::mutex> lock(mtx);
-
-    for (;;) {  // loop until a random match is found
+    while (true) {
         size_t idx = findRandomMatchIndexLocked(pattern);
-        if (idx != INVALID_INDEX) {
-            return space[idx]; // return a copy without removing
-        }
+        if (idx != INVALID_INDEX) return space[idx];
         cv.wait(lock);
     }
 }
 
+// Read and remove a tuple matching the pattern
 TupleSpace::Tuple TupleSpace::in(const Tuple& pattern) {
     std::unique_lock<std::mutex> lock(mtx);
-
-    for (;;) {  // loop until a random match is found
+    while (true) {
         size_t idx = findRandomMatchIndexLocked(pattern);
         if (idx != INVALID_INDEX) {
-            Tuple result = std::move(space[idx]); // move for efficiency
-            space.erase(space.begin() + idx);     // remove from space
+            Tuple result = std::move(space[idx]);
+            space.erase(space.begin() + idx);
             return result;
         }
         cv.wait(lock);
     }
 }
 
-// ------------------- Helper functions -------------------
-
-bool TupleSpace::isWildcard(const Value& v) {
-    return !v.has_value();
-}
-
+// Check if a single value matches a pattern, with wildcard support
 bool TupleSpace::valueMatches(const Value& pattern, const Value& v) {
-    if (isWildcard(pattern)) return true;         // ? matches anything
-    if (!pattern.has_value() || !v.has_value()) return false;
-
+    if (!pattern.has_value()) return true;
+    if (!v.has_value()) return false;
     if (pattern.type() != v.type()) return false;
 
-    if (pattern.type() == typeid(int64_t))
-        return std::any_cast<int64_t>(pattern) == std::any_cast<int64_t>(v);
-    if (pattern.type() == typeid(double))
-        return std::any_cast<double>(pattern) == std::any_cast<double>(v);
-    if (pattern.type() == typeid(std::string))
-        return std::any_cast<std::string>(pattern) == std::any_cast<std::string>(v);
+    if (pattern.type() == typeid(int64_t)) return std::any_cast<int64_t>(pattern) == std::any_cast<int64_t>(v);
+    if (pattern.type() == typeid(double)) return std::any_cast<double>(pattern) == std::any_cast<double>(v);
+    if (pattern.type() == typeid(std::string)) return std::any_cast<std::string>(pattern) == std::any_cast<std::string>(v);
 
-    return false; // unsupported type
+    return false;
 }
 
+// Check if an entire tuple matches a pattern tuple
 bool TupleSpace::tupleMatches(const Tuple& pattern, const Tuple& t) {
     if (pattern.size() != t.size()) return false;
-
-    for (size_t i = 0; i < pattern.size(); ++i) {
+    for (size_t i = 0; i < pattern.size(); ++i)
         if (!valueMatches(pattern[i], t[i])) return false;
-    }
     return true;
 }
 
-// ------------------- Index-based helper -------------------
-
+// Return a random matching tuple index, or INVALID_INDEX if none
 size_t TupleSpace::findRandomMatchIndexLocked(const Tuple& pattern) {
     std::vector<size_t> matches;
-    matches.reserve(space.size());
-
-    for (size_t i = 0; i < space.size(); ++i) {
+    for (size_t i = 0; i < space.size(); ++i)
         if (tupleMatches(pattern, space[i])) matches.push_back(i);
-    }
-    if (matches.empty()) return INVALID_INDEX;
 
-    return matches[rand() % matches.size()];
+    return matches.empty() ? INVALID_INDEX : matches[rand() % matches.size()];
 }
