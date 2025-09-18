@@ -3,7 +3,6 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <unistd.h>
-#include <cctype>
 
 // Helper: trim whitespace
 std::string trim(const std::string& s) {
@@ -29,8 +28,8 @@ std::string recvLine(int sock) {
     char c;
     while (true) {
         ssize_t bytes = read(sock, &c, 1);
-        if (bytes <= 0) break;          // connection closed or error
-        if (c == '\n') break;           // end of line
+        if (bytes <= 0) break;
+        if (c == '\n') break;
         line += c;
     }
     return line;
@@ -43,19 +42,22 @@ int main(int argc, char* argv[]) {
     }
 
     std::string cmd = argv[1];
-    std::string tuple;
 
+    // Assemble tuple string
+    std::string tuple;
     for (int i = 2; i < argc; ++i) {
+        if (i > 2) tuple += ' ';
         tuple += argv[i];
-        if (i + 1 < argc) tuple += " ";
     }
     tuple = trim(tuple);
 
+    // Validate command
     if (cmd != "-out" && cmd != "-rd" && cmd != "-in") {
         std::cerr << "ERROR: Unknown command " << cmd << "\n";
         return 1;
     }
 
+    // Validate tuple formatting
     if (tuple.empty() || tuple.front() != '(' || tuple.back() != ')') {
         std::cerr << "ERROR: Tuple must be enclosed in parentheses\n";
         return 1;
@@ -66,6 +68,7 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
+    // Connect to server
     int sock = socket(AF_INET, SOCK_STREAM, 0);
     if (sock < 0) { perror("socket"); return 1; }
 
@@ -79,12 +82,12 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
+    // Send command and tuple
     sendLine(sock, cmd + " " + tuple);
 
+    // Receive and print response
     std::string response = recvLine(sock);
-    if (!response.empty()) {
-        std::cout << response << std::endl;
-    }
+    if (!response.empty()) std::cout << response << std::endl;
 
     close(sock);
     return 0;
