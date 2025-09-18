@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Simple test script for tuple space functionality
 
 set -euo pipefail
