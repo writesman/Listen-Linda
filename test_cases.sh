@@ -18,12 +18,9 @@ run() {
     ./client "$@"
 }
 
-# Start server safely
-kill_previous_server
-set +e
-./server > server.log 2>&1 &
-SERVER_PID=$!
-set -e
+# Start server
+./server
+SRV_PID=$!
 sleep 1
 
 # Basic tuple operations
