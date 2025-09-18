@@ -1,22 +1,20 @@
 #include "tuplespace.h"
 #include <iostream>
 #include <thread>
-#include <vector>
 #include <string>
 #include <sstream>
 #include <netinet/in.h>
 #include <unistd.h>
-#include <cctype>
 #include <stdexcept>
 
-// Helper: trim whitespace
+// Trim whitespace from both ends of a string
 std::string trim(const std::string& s) {
     size_t start = s.find_first_not_of(" \t\n\r");
     size_t end = s.find_last_not_of(" \t\n\r");
     return (start == std::string::npos) ? "" : s.substr(start, end - start + 1);
 }
 
-// Send a string with '\n' at the end
+// Send a string over a socket, appending a newline at the end
 void sendLine(int sock, const std::string& line) {
     std::string msg = line + "\n";
     size_t total_sent = 0;
@@ -27,7 +25,7 @@ void sendLine(int sock, const std::string& line) {
     }
 }
 
-// Read a full line ending with '\n' from socket
+// Receive a line from a socket, stopping at newline
 std::string recvLine(int sock) {
     std::string line;
     char c;
@@ -40,13 +38,12 @@ std::string recvLine(int sock) {
     return line;
 }
 
-// Parse tuple string like ("foo", 42, 3.14, ?) into TupleSpace::Tuple
+// Parse a string like ("foo", 42, 3.14, ?) into a TupleSpace::Tuple
 TupleSpace::Tuple parse_tuple(const std::string& s, bool allow_wildcard) {
-    TupleSpace::Tuple tuple;
     std::string str = s;
-    if (!str.empty() && str.front() == '(') str = str.substr(1);
-    if (!str.empty() && str.back() == ')') str.pop_back();
+    if (!str.empty() && str.front() == '(' && str.back() == ')') str = str.substr(1, str.size() - 2);
 
+    TupleSpace::Tuple tuple;
     std::istringstream iss(str);
     std::string token;
     while (std::getline(iss, token, ',')) {
@@ -54,15 +51,16 @@ TupleSpace::Tuple parse_tuple(const std::string& s, bool allow_wildcard) {
         if (token.empty()) continue;
 
         if (token == "?") {
-            if (!allow_wildcard)
-                throw std::runtime_error("OUT command cannot contain wildcard ?");
+            if (!allow_wildcard) throw std::runtime_error("ERROR: -out command cannot contain wildcard ?");
             tuple.push_back(TupleSpace::Value{});
-        } else if (token.front() == '"' && token.back() == '"') {
-            tuple.push_back(token.substr(1, token.size() - 2));
-        } else {
+        }
+        else if (token.front() == '"' && token.back() == '"') tuple.push_back(token.substr(1, token.size() - 2));
+        else {
             try {
                 double dval = std::stod(token);
-                if (token.find('.') == std::string::npos && token.find('e') == std::string::npos && token.find('E') == std::string::npos) {
+                if (token.find('.') == std::string::npos &&
+                    token.find('e') == std::string::npos &&
+                    token.find('E') == std::string::npos) {
                     tuple.push_back(static_cast<int64_t>(dval));
                 } else {
                     tuple.push_back(dval);
@@ -75,10 +73,9 @@ TupleSpace::Tuple parse_tuple(const std::string& s, bool allow_wildcard) {
     return tuple;
 }
 
-// Convert tuple to Linda-style output
+// Convert a TupleSpace::Tuple into a string
 std::string tuple_to_output(const TupleSpace::Tuple& t) {
     std::ostringstream oss;
-    oss << std::fixed;
     for (size_t i = 0; i < t.size(); ++i) {
         if (t[i].type() == typeid(std::string))
             oss << "string \"" << std::any_cast<std::string>(t[i]) << "\"";
@@ -99,6 +96,7 @@ std::string tuple_to_output(const TupleSpace::Tuple& t) {
 
 TupleSpace ts;
 
+// Handle one client connection
 void handle_client(int client_sock) {
     while (true) {
         std::string line = recvLine(client_sock);
@@ -126,10 +124,10 @@ void handle_client(int client_sock) {
                 auto result = ts.in(tuple);
                 response = "Remove tuple: " + tuple_to_output(result);
             } else {
-                response = "ERROR Unknown command";
+                response = "ERROR: Unknown command";
             }
         } catch (const std::exception& e) {
-            response = std::string("ERROR: ") + e.what();
+            response = e.what();
         }
 
         sendLine(client_sock, response);
