@@ -16,6 +16,30 @@ std::string trim(const std::string& s) {
     return (start == std::string::npos) ? "" : s.substr(start, end - start + 1);
 }
 
+// Send a string with '\n' at the end
+void sendLine(int sock, const std::string& line) {
+    std::string msg = line + "\n";
+    size_t total_sent = 0;
+    while (total_sent < msg.size()) {
+        ssize_t sent = write(sock, msg.data() + total_sent, msg.size() - total_sent);
+        if (sent <= 0) break;
+        total_sent += sent;
+    }
+}
+
+// Read a full line ending with '\n' from socket
+std::string recvLine(int sock) {
+    std::string line;
+    char c;
+    while (true) {
+        ssize_t bytes = read(sock, &c, 1);
+        if (bytes <= 0) break;
+        if (c == '\n') break;
+        line += c;
+    }
+    return line;
+}
+
 // Parse tuple string like ("foo", 42, 3.14, ?) into TupleSpace::Tuple
 TupleSpace::Tuple parse_tuple(const std::string& s, bool allow_wildcard) {
     TupleSpace::Tuple tuple;
@@ -32,21 +56,18 @@ TupleSpace::Tuple parse_tuple(const std::string& s, bool allow_wildcard) {
         if (token == "?") {
             if (!allow_wildcard)
                 throw std::runtime_error("OUT command cannot contain wildcard ?");
-            tuple.push_back(TupleSpace::Value{}); // wildcard
+            tuple.push_back(TupleSpace::Value{});
         } else if (token.front() == '"' && token.back() == '"') {
-            tuple.push_back(token.substr(1, token.size() - 2)); // string
+            tuple.push_back(token.substr(1, token.size() - 2));
         } else {
             try {
-                // First try double
                 double dval = std::stod(token);
-                // If it has no decimal point, store as int64_t
                 if (token.find('.') == std::string::npos && token.find('e') == std::string::npos && token.find('E') == std::string::npos) {
                     tuple.push_back(static_cast<int64_t>(dval));
                 } else {
                     tuple.push_back(dval);
                 }
             } catch (...) {
-                // Fallback string
                 tuple.push_back(token);
             }
         }
@@ -79,14 +100,11 @@ std::string tuple_to_output(const TupleSpace::Tuple& t) {
 TupleSpace ts;
 
 void handle_client(int client_sock) {
-    char buffer[4096];
     while (true) {
-        ssize_t bytes = read(client_sock, buffer, sizeof(buffer) - 1);
-        if (bytes <= 0) break;
-        buffer[bytes] = '\0';
-        std::string line(buffer);
-        line = trim(line);
+        std::string line = recvLine(client_sock);
+        if (line.empty()) break;
 
+        line = trim(line);
         std::istringstream iss(line);
         std::string cmd, tuple_str;
         iss >> cmd;
@@ -96,7 +114,7 @@ void handle_client(int client_sock) {
         std::string response;
         try {
             if (cmd == "-out") {
-                auto tuple = parse_tuple(tuple_str, false); // wildcard not allowed
+                auto tuple = parse_tuple(tuple_str, false);
                 ts.out(tuple);
                 response = "Tuple with " + tuple_to_output(tuple) + " stored in tuple space.";
             } else if (cmd == "-rd") {
@@ -114,7 +132,7 @@ void handle_client(int client_sock) {
             response = std::string("ERROR: ") + e.what();
         }
 
-        write(client_sock, response.c_str(), response.size());
+        sendLine(client_sock, response);
     }
     close(client_sock);
 }
