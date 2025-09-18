@@ -33,23 +33,23 @@ TupleSpace::Tuple TupleSpace::in(const Tuple& pattern) {
 }
 
 // Check if a single value matches a pattern, with wildcard support
-bool TupleSpace::valueMatches(const Value& pattern, const Value& v) {
+bool TupleSpace::valueMatches(const Value& pattern, const Value& candidate) {
     if (!pattern.has_value()) return true;
-    if (!v.has_value()) return false;
-    if (pattern.type() != v.type()) return false;
+    if (!candidate.has_value()) return false;
+    if (pattern.type() != candidate.type()) return false;
 
-    if (pattern.type() == typeid(int64_t)) return std::any_cast<int64_t>(pattern) == std::any_cast<int64_t>(v);
-    if (pattern.type() == typeid(double)) return std::any_cast<double>(pattern) == std::any_cast<double>(v);
-    if (pattern.type() == typeid(std::string)) return std::any_cast<std::string>(pattern) == std::any_cast<std::string>(v);
+    if (pattern.type() == typeid(int64_t)) return std::any_cast<int64_t>(pattern) == std::any_cast<int64_t>(candidate);
+    if (pattern.type() == typeid(double)) return std::any_cast<double>(pattern) == std::any_cast<double>(candidate);
+    if (pattern.type() == typeid(std::string)) return std::any_cast<std::string>(pattern) == std::any_cast<std::string>(candidate);
 
     return false;
 }
 
 // Check if an entire tuple matches a pattern tuple
-bool TupleSpace::tupleMatches(const Tuple& pattern, const Tuple& t) {
-    if (pattern.size() != t.size()) return false;
+bool TupleSpace::tupleMatches(const Tuple& pattern, const Tuple& candidate) {
+    if (pattern.size() != candidate.size()) return false;
     for (size_t i = 0; i < pattern.size(); ++i)
-        if (!valueMatches(pattern[i], t[i])) return false;
+        if (!valueMatches(pattern[i], candidate[i])) return false;
     return true;
 }
 
