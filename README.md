@@ -1,4 +1,4 @@
-# Assignment 1 - Listen Linda!
+# Assignment 1 - Listen Linda
 
 CSC-4770-001 - Distributed & Cloud Computing
 

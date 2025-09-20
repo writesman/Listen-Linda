@@ -19,7 +19,7 @@ run() {
 }
 
 # Start server in background
-./server > server.log 2>&1 &
+./server >server.log 2>&1 &
 SERVER_PID=$!
 sleep 1
 
