@@ -1,7 +1,6 @@
 # Assignment 1 - Listen Linda
 
-CSC-4770-001 - Distributed & Cloud Computing
-
+CSC-4770-001 - Distributed & Cloud Computing  
 Marcus Writesman
 
 ## Overview
