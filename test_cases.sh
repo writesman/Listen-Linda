@@ -5,10 +5,8 @@ set -euo pipefail
 
 # Ensure the server is stopped on script exit
 cleanup() {
-    if [[ -n "${SERVER_PID:-}" ]] && kill -0 "$SERVER_PID" 2>/dev/null; then
-        kill "$SERVER_PID"
-        wait "$SERVER_PID" 2>/dev/null || true
-    fi
+    kill "$SERVER_PID" 2>/dev/null || true
+    wait "$SERVER_PID" 2>/dev/null || true
 }
 trap cleanup EXIT
 
