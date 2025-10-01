@@ -90,11 +90,11 @@ This will compile the project and then execute the `test_cases.sh` script.
 
 ## Project Structure
 
-- **client.cpp**: A command-line client that connects to the server to send out, rd, and in requests.
-- **server.cpp**: A multi-threaded TCP server that listens for client connections, parses requests, and executes operations on the TupleSpace.
-- **tuplespace.h / tuplespace.cpp**: The core implementation of the thread-safe TupleSpace class, which manages tuples and handles blocking and notification for concurrent operations.
-- **test_cases.sh**: An automated bash script that runs a series of client commands to verify the correctness of the server and tuple space.
-- **Makefile**: Contains rules to build the server and client executables and to run the test script.
+- `client.cpp`: A command-line client that connects to the server to send out, rd, and in requests.
+- `server.cpp`: A multi-threaded TCP server that listens for client connections, parses requests, and executes operations on the TupleSpace.
+- `tuplespace.h`/`tuplespace.cpp`: The core implementation of the thread-safe TupleSpace class, which manages tuples and handles blocking and notification for concurrent operations.
+- `test_cases.sh`: An automated bash script that runs a series of client commands to verify the correctness of the server and tuple space.
+- `Makefile`: Contains rules to build the server and client executables and to run the test script.
 
 ---
 
